@@ -47,6 +47,8 @@ namespace SchedulerDB
 
         static void Main(string[] args)
         {
+            var fliepath = $@"C:\Users\v-vyin\SchedulerDB_ExcelFile\{"Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm")}";
+            Directory.CreateDirectory(fliepath);
             string sql = @"IF object_id('tempdb..#RESTTReservation') IS NOT NULL DROP TABLE #RESTTReservation
 
                             SELECT a.RoomCode RESRoomCode,
@@ -88,7 +90,7 @@ namespace SchedulerDB
 
                              ) b ON a.MedicalNoteNo = b.DVC_CHRT AND a.ExaRequestNo = b.DVC_RQNO
 
-                             select RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,ExaRequestNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM from #RESTTReservation order by RESRoomCode;
+                             select RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,ExaRequestNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM from #RESTTReservation order by DVC_STTM;
                                  ";
 
             //Step 1.讀取DB Table List
@@ -106,40 +108,50 @@ namespace SchedulerDB
             //Step 1.1.將資料放入List
             List<DBData> migrationTableInfoList = sqlHelper.QueryAsync<DBData>(sql).Result?.ToList();
             //Step 1.2 將date Distinct排序給sheet用 > 遞增 order by 遞減OrderByDescending
-            var datetime = migrationTableInfoList.Select(p => p.Start != DateTime.MinValue ? p.Start.Date : p.PlanDate.Date)
+            var datetime = migrationTableInfoList.Where(p => p.Start != DateTime.MinValue ? p.Start.Date >= DateTime.Parse("2020/08/10") : p.PlanDate.Date >= DateTime.Parse("2020/08/10"))
+                                                 .Select(p => p.Start != DateTime.MinValue ? p.Start.Date : p.PlanDate.Date)
                                                  .OrderBy(p => p.Date)
                                                  .Distinct()
                                                  .ToList();
+            //以科室名稱作為檔案名稱
+            var XRYRoomCode = migrationTableInfoList.Select(p => p.XRYRoomCode == null ? "Blank" : p.XRYRoomCode)
+                                                    .Distinct()
+                                                    .ToList();
+
             //Step 2.建立 各日期Sheet
             // var excelname = "Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm") + ".xlsx";
-            var excelname = new FileInfo("Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm") + ".xlsx");
-            //ExcelPackage.LicenseContext = LicenseContext.Commercial;
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (var excel = new ExcelPackage(excelname))
+            foreach (string roomcode in XRYRoomCode)
             {
-                var importDBData = new ImportDBData();
-                importDBData.GenFirstSheet(excel, datetime);
-                for (int sheetnum = 0; sheetnum <= datetime.Count - 1; sheetnum++)
+                var excelname = new FileInfo(roomcode + "_" + DateTime.Now.ToString("yyyyMMdd") + ".xlsx");
+                //ExcelPackage.LicenseContext = LicenseContext.Commercial;
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using (var excel = new ExcelPackage(excelname))
                 {
-                    //Step 3.將對應的List 丟到各Sheet中
-                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(datetime[sheetnum].ToString("yyyy-MM-dd"));
-                    //抽function
-                    int rowIndex = 2;
-                    int colIndex = 1;
-                    importDBData.ImportData(dt, sheet, rowIndex, colIndex, migrationTableInfoList);
-                }
-                // Step 4.Export EXCEL
-                Byte[] bin = excel.GetAsByteArray();
-                File.WriteAllBytes(@"C:\Users\v-vyin\SchedulerDB_ExcelFile\" + excelname, bin);
+                    var importDBData = new ImportDBData();
+                    importDBData.GenFirstSheet(excel, datetime);
+                    for (int sheetnum = 0; sheetnum <= datetime.Count - 1; sheetnum++)
+                    {
+                        //Step 3.將對應的List 丟到各Sheet中
+                        ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(datetime[sheetnum].ToString("yyyy-MM-dd"));
+                        //抽function
+                        int rowIndex = 2;
+                        int colIndex = 1;
+                        importDBData.ImportData(dt, sheet, rowIndex, colIndex, migrationTableInfoList, roomcode);
+                    }
+                    // Step 4.Export EXCEL
+                    Byte[] bin = excel.GetAsByteArray();
+                    File.WriteAllBytes(fliepath.ToString() + @"\" + excelname, bin);
 
+                }
             }
+
 
             //Step 5. Send Email
             var helper = new SMTPHelper("lovemath0630@gmail.com", "koormyktfbbacpmj", "smtp.gmail.com", 587, true, true); //寄出信email
             string subject = $"Datebase Scheduler報表 {DateTime.Now.ToString("yyyyMMdd")}"; //信件主旨
             string body = $"Hi All, \r\n\r\n{DateTime.Now.ToString("yyyyMMdd")} Scheduler報表 如附件，\r\n\r\n Best Regards, \r\n\r\n Vicky Yin";//信件內容
             string attachments = null;//附件
-            var fileName = @"C:\Users\v-vyin\SchedulerDB_ExcelFile\" + excelname;//附件位置
+            var fileName = @"C:\Users\v-vyin\SchedulerDB_ExcelFile\";//附件位置
             if (File.Exists(fileName.ToString()))
             {
                 attachments = fileName.ToString();
@@ -199,7 +211,7 @@ namespace SchedulerDB
             private int _colIndex { get; set; }
             private DataTable _dt { get; set; }
             private List<DBData> _dblist { get; set; }
-            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist)
+            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist, string roomcode)
             {
                 _sheet = sheet;
                 _rowIndex = rowIndex;
@@ -226,7 +238,7 @@ namespace SchedulerDB
                 //將對應值放入
                 foreach (var dbdata in _dblist)
                 {
-                    if (_sheet.ToString() == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
+                    if (dbdata.XRYRoomCode == roomcode && _sheet.ToString() == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
                     {
                         _rowIndex++;
                         _colIndex = 1;
