@@ -130,7 +130,7 @@ namespace SchedulerDB
                 }
                 // Step 4.Export EXCEL
                 Byte[] bin = excel.GetAsByteArray();
-                File.WriteAllBytes(@"D:\微軟MCS\SchedulerDB_Excel\" + excelname, bin);
+                File.WriteAllBytes(@"C:\Users\v-vyin\SchedulerDB_ExcelFile\" + excelname, bin);
 
             }
 
@@ -139,7 +139,7 @@ namespace SchedulerDB
             string subject = $"Datebase Scheduler報表 {DateTime.Now.ToString("yyyyMMdd")}"; //信件主旨
             string body = $"Hi All, \r\n\r\n{DateTime.Now.ToString("yyyyMMdd")} Scheduler報表 如附件，\r\n\r\n Best Regards, \r\n\r\n Vicky Yin";//信件內容
             string attachments = null;//附件
-            var fileName = @"D:\微軟MCS\SchedulerDB_Excel\" + excelname;//附件位置
+            var fileName = @"C:\Users\v-vyin\SchedulerDB_ExcelFile\" + excelname;//附件位置
             if (File.Exists(fileName.ToString()))
             {
                 attachments = fileName.ToString();
@@ -147,9 +147,10 @@ namespace SchedulerDB
             string toMailList = "lovemath0630@gmail.com;v-vyin@microsoft.com";//收件者
             string ccMailList = "";//CC收件者
 
-            helper.SendMail(toMailList, ccMailList, null, subject, body, attachments);
+            helper.SendMail(toMailList, ccMailList, null, subject, body, null);
         }
 
+        #region --DBdata getset
         public class DBData
         {
             [Required]
@@ -189,6 +190,8 @@ namespace SchedulerDB
             public string XRYSourceCode { get; set; }
             public DateTime PlanDate { get; set; }
         }
+        #endregion
+        #region -- Data to excel
         public class ImportDBData
         {
             private ExcelWorksheet _sheet { get; set; }
@@ -286,7 +289,7 @@ namespace SchedulerDB
             }
 
         }
-
+        #endregion
 
     }
 }

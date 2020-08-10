@@ -1,25 +1,21 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\user\\Source\\Repos\\SchedulerDB\\SchedulerDB\\SchedulerDB.csproj": {}
+    "C:\\Users\\v-vyin\\SchedulerDB_Excel\\SchedulerDB\\SchedulerDB.csproj": {}
   },
   "projects": {
-    "C:\\Users\\user\\Source\\Repos\\SchedulerDB\\SchedulerDB\\SchedulerDB.csproj": {
+    "C:\\Users\\v-vyin\\SchedulerDB_Excel\\SchedulerDB\\SchedulerDB.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Source\\Repos\\SchedulerDB\\SchedulerDB\\SchedulerDB.csproj",
+        "projectUniqueName": "C:\\Users\\v-vyin\\SchedulerDB_Excel\\SchedulerDB\\SchedulerDB.csproj",
         "projectName": "SchedulerDB",
-        "projectPath": "C:\\Users\\user\\Source\\Repos\\SchedulerDB\\SchedulerDB\\SchedulerDB.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Source\\Repos\\SchedulerDB\\SchedulerDB\\obj\\",
+        "projectPath": "C:\\Users\\v-vyin\\SchedulerDB_Excel\\SchedulerDB\\SchedulerDB.csproj",
+        "packagesPath": "C:\\Users\\v-vyin\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\v-vyin\\SchedulerDB_Excel\\SchedulerDB\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Microsoft\\Xamarin\\NuGet\\"
-        ],
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Xamarin.Offline.config"
+          "C:\\Users\\v-vyin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "netcoreapp3.1"
