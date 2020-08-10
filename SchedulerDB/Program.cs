@@ -108,39 +108,40 @@ namespace SchedulerDB
             //Step 1.1.將資料放入List
             List<DBData> migrationTableInfoList = sqlHelper.QueryAsync<DBData>(sql).Result?.ToList();
             //Step 1.2 將date Distinct排序給sheet用 > 遞增 order by 遞減OrderByDescending
-            var datetime = migrationTableInfoList.Where(p => p.Start != DateTime.MinValue ? p.Start.Date >= DateTime.Parse("2020/08/10") : p.PlanDate.Date >= DateTime.Parse("2020/08/10"))
+            var datetime = migrationTableInfoList.Where(p => p.Start != DateTime.MinValue ? p.Start.Date >= DateTime.Now.AddDays(-2)&& p.Start.Date <= DateTime.Now.AddDays(14) : p.PlanDate.Date >= DateTime.Now.AddDays(-1) && p.PlanDate.Date <= DateTime.Now.AddDays(14))
                                                  .Select(p => p.Start != DateTime.MinValue ? p.Start.Date : p.PlanDate.Date)
                                                  .OrderBy(p => p.Date)
                                                  .Distinct()
                                                  .ToList();
             //以科室名稱作為檔案名稱
-            var XRYRoomCode = migrationTableInfoList.Select(p => p.XRYRoomCode == null ? "Blank" : p.XRYRoomCode)
+            var XRYRoomCode = migrationTableInfoList.OrderBy(p=>p.XRYRoomCode)
+                                                    .Select(p => p.XRYRoomCode == null ? "Blank" : p.XRYRoomCode)
                                                     .Distinct()
                                                     .ToList();
 
             //Step 2.建立 各日期Sheet
             // var excelname = "Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm") + ".xlsx";
-            foreach (string roomcode in XRYRoomCode)
+            foreach (var date in datetime)
             {
-                var excelname = new FileInfo(roomcode + "_" + DateTime.Now.ToString("yyyyMMdd") + ".xlsx");
+                var excelname = new FileInfo(date.ToString("yyyyMMdd") + ".xlsx");
                 //ExcelPackage.LicenseContext = LicenseContext.Commercial;
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
                 using (var excel = new ExcelPackage(excelname))
                 {
                     var importDBData = new ImportDBData();
-                    importDBData.GenFirstSheet(excel, datetime);
-                    for (int sheetnum = 0; sheetnum <= datetime.Count - 1; sheetnum++)
+                    importDBData.GenFirstSheet(excel, XRYRoomCode);
+                    for (int sheetnum = 0; sheetnum <= XRYRoomCode.Count - 1; sheetnum++)
                     {
                         //Step 3.將對應的List 丟到各Sheet中
-                        ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(datetime[sheetnum].ToString("yyyy-MM-dd"));
+                        ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(XRYRoomCode[sheetnum]);
                         //抽function
                         int rowIndex = 2;
                         int colIndex = 1;
-                        importDBData.ImportData(dt, sheet, rowIndex, colIndex, migrationTableInfoList, roomcode);
+                        importDBData.ImportData(dt, sheet, rowIndex, colIndex, migrationTableInfoList, date);
                     }
                     // Step 4.Export EXCEL
                     Byte[] bin = excel.GetAsByteArray();
-                    File.WriteAllBytes(fliepath.ToString() + @"\" + excelname, bin);
+                    File.WriteAllBytes(fliepath.ToString()+ @"\" + excelname, bin);
 
                 }
             }
@@ -211,7 +212,7 @@ namespace SchedulerDB
             private int _colIndex { get; set; }
             private DataTable _dt { get; set; }
             private List<DBData> _dblist { get; set; }
-            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist, string roomcode)
+            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist,DateTime date)
             {
                 _sheet = sheet;
                 _rowIndex = rowIndex;
@@ -238,7 +239,7 @@ namespace SchedulerDB
                 //將對應值放入
                 foreach (var dbdata in _dblist)
                 {
-                    if (dbdata.XRYRoomCode == roomcode && _sheet.ToString() == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
+                    if (_sheet.ToString() == (dbdata.XRYRoomCode == null ? "Blank": dbdata.XRYRoomCode) && date.ToString("yyyy-MM-dd") == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
                     {
                         _rowIndex++;
                         _colIndex = 1;
@@ -267,7 +268,7 @@ namespace SchedulerDB
 
 
             }
-            public void GenFirstSheet(ExcelPackage excel, List<DateTime> list)
+            public void GenFirstSheet(ExcelPackage excel, List<string> list)
             {
                 int rowIndex = 1;
                 int colIndex = 1;
@@ -284,14 +285,14 @@ namespace SchedulerDB
 
                 maxCol = Math.Max(maxCol, colIndex - 1);
 
-                foreach (DateTime info in list)
+                foreach (string info in list)
                 {
                     rowIndex++;
                     colIndex = 1;
 
                     firstSheet.Cells[rowIndex, colIndex++].Value = rowIndex - 1;
-                    firstSheet.Cells[rowIndex, colIndex++].Value = info.ToString("yyyy-MM-dd");
-                    firstSheet.Cells[rowIndex, colIndex - 1].SetHyperlink(new Uri($"#'{(string.IsNullOrEmpty(info.ToString("yyyy-MM-dd")) ? info.ToString("yyyy-MM-dd") : info.ToString("yyyy-MM-dd"))}'!A1", UriKind.Relative));
+                    firstSheet.Cells[rowIndex, colIndex++].Value = info;
+                    firstSheet.Cells[rowIndex, colIndex - 1].SetHyperlink(new Uri($"#'{(string.IsNullOrEmpty(info) ? "Blank" : info)}'!A1", UriKind.Relative));
                 }
 
                 for (int i = 1; i <= maxCol; i++)
