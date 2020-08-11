@@ -223,7 +223,7 @@ namespace SchedulerDB
                 _sheet.Cells[_rowIndex - 1, _colIndex].SetHyperlink(new Uri($"#'目錄'!A1", UriKind.Relative));
                 string temp_MedicalNoteNo = null;
                 string temp_ExaRequestNo = null;
-
+                string temp_DVC_CHRT = null;
                 //3.1塞columnName 到Row 
                 for (int columnNameIndex = 0; columnNameIndex <= _dt.Columns.Count - 1; columnNameIndex++)
                 {
@@ -257,13 +257,14 @@ namespace SchedulerDB
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_RQNO;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_DATE;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_STTM;
-                        if (dbdata.MedicalNoteNo == (temp_MedicalNoteNo == null ? string.Empty: temp_MedicalNoteNo) && dbdata.ExaRequestNo == (temp_ExaRequestNo == null ? string.Empty:temp_ExaRequestNo))
+                        if (dbdata.MedicalNoteNo == (temp_MedicalNoteNo == null ? string.Empty: temp_MedicalNoteNo) && dbdata.ExaRequestNo == (temp_ExaRequestNo == null ? string.Empty:temp_ExaRequestNo)&&dbdata.DVC_CHRT == (temp_DVC_CHRT == null ? string.Empty : temp_DVC_CHRT))
                         {
                             _sheet.Cells[_rowIndex--, _colIndex].Value = "v";
                             _sheet.Cells[_rowIndex++, _colIndex].Value = "v";
                         }
                         temp_MedicalNoteNo = dbdata.MedicalNoteNo;
                         temp_ExaRequestNo = dbdata.ExaRequestNo;
+                        temp_DVC_CHRT = dbdata.DVC_CHRT;
                     }
                 }
 
