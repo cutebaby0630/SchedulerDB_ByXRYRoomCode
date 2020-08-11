@@ -47,7 +47,7 @@ namespace SchedulerDB
 
         static void Main(string[] args)
         {
-            var fliepath = $@"C:\Users\v-vyin\SchedulerDB_ExcelFile\{"Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm")}";
+            var fliepath = $@"C:\Users\user\SchedulerDB_ExcelFile\{"Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm")}";
             Directory.CreateDirectory(fliepath);
             string sql = @"IF object_id('tempdb..#RESTTReservation') IS NOT NULL DROP TABLE #RESTTReservation
 
@@ -90,7 +90,7 @@ namespace SchedulerDB
 
                              ) b ON a.MedicalNoteNo = b.DVC_CHRT AND a.ExaRequestNo = b.DVC_RQNO
 
-                             select RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,ExaRequestNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM from #RESTTReservation order by DVC_STTM;
+                             select RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,ExaRequestNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM from #RESTTReservation order by DVC_STTM ;
                                  ";
 
             //Step 1.讀取DB Table List
@@ -108,13 +108,13 @@ namespace SchedulerDB
             //Step 1.1.將資料放入List
             List<DBData> migrationTableInfoList = sqlHelper.QueryAsync<DBData>(sql).Result?.ToList();
             //Step 1.2 將date Distinct排序給sheet用 > 遞增 order by 遞減OrderByDescending
-            var datetime = migrationTableInfoList.Where(p => p.Start != DateTime.MinValue ? p.Start.Date >= DateTime.Now.AddDays(-2)&& p.Start.Date <= DateTime.Now.AddDays(14) : p.PlanDate.Date >= DateTime.Now.AddDays(-1) && p.PlanDate.Date <= DateTime.Now.AddDays(14))
+            var datetime = migrationTableInfoList.Where(p => p.Start != DateTime.MinValue ? p.Start.Date >= DateTime.Now.AddDays(-2) && p.Start.Date <= DateTime.Now.AddDays(14) : p.PlanDate.Date >= DateTime.Now.AddDays(-1) && p.PlanDate.Date <= DateTime.Now.AddDays(14))
                                                  .Select(p => p.Start != DateTime.MinValue ? p.Start.Date : p.PlanDate.Date)
                                                  .OrderBy(p => p.Date)
                                                  .Distinct()
                                                  .ToList();
             //以科室名稱作為檔案名稱
-            var XRYRoomCode = migrationTableInfoList.OrderBy(p=>p.XRYRoomCode)
+            var XRYRoomCode = migrationTableInfoList.OrderBy(p => p.XRYRoomCode)
                                                     .Select(p => p.XRYRoomCode == null ? "Blank" : p.XRYRoomCode)
                                                     .Distinct()
                                                     .ToList();
@@ -141,7 +141,7 @@ namespace SchedulerDB
                     }
                     // Step 4.Export EXCEL
                     Byte[] bin = excel.GetAsByteArray();
-                    File.WriteAllBytes(fliepath.ToString()+ @"\" + excelname, bin);
+                    File.WriteAllBytes(fliepath.ToString() + @"\" + excelname, bin);
 
                 }
             }
@@ -212,7 +212,7 @@ namespace SchedulerDB
             private int _colIndex { get; set; }
             private DataTable _dt { get; set; }
             private List<DBData> _dblist { get; set; }
-            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist,DateTime date)
+            public void ImportData(DataTable dt, ExcelWorksheet sheet, int rowIndex, int colIndex, List<DBData> dblist, DateTime date)
             {
                 _sheet = sheet;
                 _rowIndex = rowIndex;
@@ -221,6 +221,8 @@ namespace SchedulerDB
                 _dblist = dblist;
                 _sheet.Cells[_rowIndex - 1, _colIndex].Value = "返回目錄";
                 _sheet.Cells[_rowIndex - 1, _colIndex].SetHyperlink(new Uri($"#'目錄'!A1", UriKind.Relative));
+                string temp_MedicalNoteNo = null;
+                string temp_ExaRequestNo = null;
 
                 //3.1塞columnName 到Row 
                 for (int columnNameIndex = 0; columnNameIndex <= _dt.Columns.Count - 1; columnNameIndex++)
@@ -239,7 +241,7 @@ namespace SchedulerDB
                 //將對應值放入
                 foreach (var dbdata in _dblist)
                 {
-                    if (_sheet.ToString() == (dbdata.XRYRoomCode == null ? "Blank": dbdata.XRYRoomCode) && date.ToString("yyyy-MM-dd") == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
+                    if (_sheet.ToString() == (dbdata.XRYRoomCode == null ? "Blank" : dbdata.XRYRoomCode) && date.ToString("yyyy-MM-dd") == (dbdata.Start != DateTime.MinValue ? dbdata.Start.ToString("yyyy-MM-dd") : dbdata.PlanDate.ToString("yyyy-MM-dd")))
                     {
                         _rowIndex++;
                         _colIndex = 1;
@@ -255,6 +257,13 @@ namespace SchedulerDB
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_RQNO;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_DATE;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_STTM;
+                        if (dbdata.MedicalNoteNo == (temp_MedicalNoteNo == null ? string.Empty: temp_MedicalNoteNo) && dbdata.ExaRequestNo == (temp_ExaRequestNo == null ? string.Empty:temp_ExaRequestNo))
+                        {
+                            _sheet.Cells[_rowIndex--, _colIndex].Value = "v";
+                            _sheet.Cells[_rowIndex++, _colIndex].Value = "v";
+                        }
+                        temp_MedicalNoteNo = dbdata.MedicalNoteNo;
+                        temp_ExaRequestNo = dbdata.ExaRequestNo;
                     }
                 }
 
