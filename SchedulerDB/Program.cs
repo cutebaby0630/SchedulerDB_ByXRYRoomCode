@@ -47,51 +47,108 @@ namespace SchedulerDB
 
         static void Main(string[] args)
         {
-            var fliepath = $@"C:\Users\user\SchedulerDB_ExcelFile\{"Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm")}";
+            var fliepath = $@"C:\Users\v-vyin\SchedulerDB_ExcelFile\{"Scheduler" + DateTime.Now.ToString("yyyyMMddhhmm")}";
             Directory.CreateDirectory(fliepath);
-            string sql = @"IF object_id('tempdb..#RESTTReservation') IS NOT NULL DROP TABLE #RESTTReservation
+            string sql = @"
+IF OBJECT_ID('TEMPDB..#Source1') is not null DROP TABLE #Source1
+SELECT A.*
 
-                            SELECT a.RoomCode RESRoomCode,
-                                   b.RoomCode XRYRoomCode,a.CalendarGroupName,
-                                   a.MedicalNoteNo,a.ExaRequestNo,a.[Start],b.PlanDate ,a.ReservationSourceType,a.SourceCode,
-                                   b.DVC_CHRT,b.DVC_RQNO,b.DVC_DATE,b.DVC_STTM,b.SourceCode XRYSourceCode
-                            INTO #RESTTReservation
-                            FROM 
-                            (
-                              SELECT d.RoomCode,d.CalendarGroupName,a.MedicalNoteNo,a.ExaRequestNo,c.[Start],a.ReservationSourceType,
-                                     'RESTTReservation' SourceCode
-                              FROM HISSCHDB.dbo.RESTTReservation a
-                              INNER JOIN HISSCHDB.dbo.RESTTimeslotRes b ON a.Id = b.ReservationId
-                              INNER JOIN HISSCHDB.dbo.RESTTimeslot c ON b.TimeslotId = c.Id
-                              LEFT JOIN HISSCHDB.dbo.tmpEXAMRoomMapping d ON a.CalendarId = d.CalendarId
-                              WHERE c.[Start] >= convert(date,dateadd(day,-30,getdate()))
-                              --ORDER BY d.RoomCode,c.[Start]
-                            ) a
-                            FULL OUTER JOIN 
-                            (
-                             SELECT SUBSTRING(a.DVC_ROOM,2,2) RoomCode,a.DVC_CHRT,a.DVC_RQNO,
+,ROW_NUMBER() OVER (PARTITION BY DVC_CHRT,DVC_RQNO,DVC_ROOM ORDER BY [Priority] ASC, ModifyTime DESC ) AS ROWNO 
+INTO #Source1 
+FROM (
+SELECT 
+       x.DVC_ROOM,x.DVC_CHRT,x.DVC_RQNO,x.DVC_DATE,x.DVC_STTM,
+              x.DVC_CON1,x.DVC_CON2,x.DVC_CON3 ,x.DVC_TXDT+x.DVC_TXTM ModifyTime
+          ,1 AS [Priority]
+       ,'XRYMDVCF' SourceTable
+FROM PXRYDB.SKDBA.XRYMDVCF X
+WHERE DVC_CHRT <> ''
+UNION ALL
+SELECT 
+          OPE_OPRM,OPE_CHRT,OPE_ODRN,OPE_DATE,OPE_TIME,
+          OPE_OPNO,'','',OPE_TXDT+OPE_TXTM ModifyTime
+         
+         ,2 AS [Priority]
+      ,'OPDMOPEF' SourceTable
+FROM POPDDB.SKDBA.OPDMOPEF
+where OPE_NOTE = '' --非取消
 
-                            CASE WHEN ISNUMERIC(DVC_DATE) = 1 AND ISNUMERIC(DVC_STTM) = 1 
-                            THEN try_convert(datetime,convert(varchar, substring((
-                                            (CASE WHEN LEN(rtrim(DVC_DATE)) = 7 
-                                                  THEN DVC_DATE 
-                             ELSE (CASE WHEN LEFT(DVC_DATE,1) = '0' THEN '1' ELSE '0' END) + DVC_DATE END )) ,1,3)+ 1911)+RIGHT(DVC_DATE,4) +' '+substring(DVC_STTM,1,2)+':'+substring(DVC_STTM,3,2))     
-                             WHEN ISNUMERIC(DVC_DATE) = 1 
-                             THEN try_convert(date,convert(varchar, substring((
-                             (CASE WHEN LEN(rtrim(DVC_DATE)) = 7 
-                                   THEN DVC_DATE 
-                                ELSE (CASE WHEN LEFT(DVC_DATE,1) = '0' THEN '1' ELSE '0' END) + DVC_DATE END )),1,3)+ 1911)+RIGHT(DVC_DATE,4))     
-                             END PlanDate,
-                              a.DVC_DATE,a.DVC_STTM,'XRYMDVCF' SourceCode
-                              FROM [10.1.222.182].PXRYDB.SKDBA.XRYMDVCF a
-                              WHERE rtrim(DVC_CHRT) <> ''
-                              AND rtrim(DVC_RQNO) <> ''
-                              AND a.DVC_DATE >=  convert(varchar,dateadd(day,-30,getdate()),112)-19110000
+UNION ALL
+SELECT 
+          CAT_ROOM,CAT_CHRT,CAT_RQNO,CAT_DATE,CAT_TIME,
+          '','','',CAT_DATE+CAT_STTM ModifyTime
+         ,3 AS [Priority]
+      ,'XRYMCATF' SourceTable
+FROM PXRYDB.SKDBA.XRYMCATF
 
-                             ) b ON a.MedicalNoteNo = b.DVC_CHRT AND a.ExaRequestNo = b.DVC_RQNO
+UNION ALL
+SELECT 
+          'DS',REC_CHAT,ODD_ODRN,REC_DAT7,REC_TIME
+      ,substring(ODD_PKEY,11,7),'','',REC_DAT7+REC_TIME ModifyTime
+          ,4 AS [Priority]
+      ,'OPDTODDF' SourceTable
+FROM POPDDB.SKDBA.opdtoddf 
+ INNER JOIN POPDDB.SKDBA.OPDTRECF ON REC_PKEY=SUBSTRING(ODD_PKEY,1,10)
+WHERE odd_stck = 'DS'
+AND ODD_ODRN<>''
 
-                             select RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,ExaRequestNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM from #RESTTReservation order by DVC_STTM ;
-                                 ";
+
+UNION ALL
+SELECT 
+         LEFT(MWE_SCDT,2) MWE_ROOM,left(a.MWE_PKEY,8) MWE_CHRT,SUBSTRING(a.MWE_PKEY,9,9) MWE_RQNO, MWE_CHD7,MWE_CHTM,
+       a.MWE_OPNO,'','',MWE_CHD7+MWE_CHTM ModifyTime
+      
+          ,5 AS [Priority]
+       ,'XRYMMWER' SourceTable
+FROM PXRYDB.SKDBA.XRYMMWER a 
+WHERE a.MWE_CHD7 >= '1090501'
+AND a.MWE_SCTM In (N'7421', N'7423', N'7424', N'7425', N'7426')
+AND a.MWE_EXDT = ''
+) A
+
+
+--SELECT * FROM #Source1 WHERE ROWNO = 1
+
+
+IF object_id('tempdb..#RESTTReservation') IS NOT NULL DROP TABLE #RESTTReservation
+
+DECLARE @DVC_DATE char(4) = '0916'
+
+SELECT a.ReservationId,a.RoomCode RESRoomCode,
+       b.DVC_ROOM XRYRoomCode,a.CalendarGroupName,
+       a.MedicalNoteNo,a.ApplyFormNo,a.[Start],a.SourceCode,a.SourceTable,
+          b.DVC_CHRT,b.DVC_RQNO,b.DVC_DATE,b.DVC_STTM,b.SourceTable XRYSourceCode,
+          b.DVC_CON1,b.DVC_CON2,b.DVC_CON3,b.ModifyTime
+INTO #RESTTReservation
+FROM 
+(
+       SELECT distinct
+                     --a.id, cal.CalendarCode RoomCode,calg.DisplayName CalendarGroupName,a.MedicalNoteNo,
+                 a.ReservationId, g.RoomCode RoomCode,g.CalendarGroupName ,a.MedicalNoteNo,
+              a.ApplyFormNo,c.[Start],a.SourceCode,
+               'RESTTReservation' SourceTable
+       FROM HISSCHDB.dbo.RESTReservationOrder a
+       INNER JOIN HISSCHDB.dbo.RESTTimeslotRes b ON a.ReservationId = b.ReservationId
+       INNER JOIN HISSCHDB.dbo.RESTTimeslot c ON b.TimeslotId = c.Id
+          left JOIN HISSCHDB.dbo.RESTReservationOrderDetail d ON a.ReservationId = d.ReservationId
+          left JOIN HISSCHDB.dbo.RESTReservationOrderDetailForEXA e ON d.ReservationDetailId = e.ReservationDetailId
+          left JOIN HISDB.dbo.EXATOrderDetail f ON e.ExaOrderDetailId = f.ExaOrderDetailId
+          LEFT JOIN HISSCHDB.dbo.tmpEXAMRoomMapping g ON f.OldRoomCode = g.OldRoomCode
+       --LEFT JOIN HISSCHDB.dbo.PROMCalendar cal ON a.CalendarId = cal.Id 
+       --LEFT JOIN HISSCHDB.dbo.PROMCalendarGroup calg ON cal.CalendarGroupId = calg.Id
+       --LEFT JOIN (SELECT *,ROW_NUMBER() OVER (PARTITION BY CalendarId ORDER BY RoomCode) rownum
+       --           FROM HISSCHDB.dbo.tmpEXAMRoomMapping 
+       --                 WHERE OldRoomCode IS NOT NULL ) d ON a.CalendarId = d.CalendarId AND rownum = 1
+       WHERE a.MedicalOrderCode = 'EXA'
+       --AND convert(date,c.[Start]) = '2020'+@DVC_DATE
+       --ORDER BY d.RoomCode,c.[Start]
+) a
+FULL OUTER JOIN #Source1 b ON a.MedicalNoteNo = b.DVC_CHRT AND a.ApplyFormNo = b.DVC_RQNO
+
+SELECT RESRoomCode,XRYRoomCode,CalendarGroupName,MedicalNoteNo,Start,DVC_CHRT,DVC_RQNO,DVC_DATE,DVC_STTM 
+FROM #RESTTReservation a
+ORDER by XRYRoomCode, RESRoomCode
+";
 
             //Step 1.讀取DB Table List
             IConfiguration config = new ConfigurationBuilder().AddJsonFile("appsetting.json", optional: true, reloadOnChange: true).Build();
@@ -115,7 +172,7 @@ namespace SchedulerDB
                                                  .ToList();
             //以科室名稱作為檔案名稱
             var XRYRoomCode = migrationTableInfoList.OrderBy(p => p.XRYRoomCode)
-                                                    .Select(p => p.XRYRoomCode == null ? "Blank" : p.XRYRoomCode)
+                                                    .Select(p => p.XRYRoomCode == null || p.XRYRoomCode == "" || p.XRYRoomCode == " " || p.XRYRoomCode == "    " ||p.XRYRoomCode =="  " ? "Blank" : p.XRYRoomCode)
                                                     .Distinct()
                                                     .ToList();
 
@@ -257,7 +314,7 @@ namespace SchedulerDB
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_RQNO;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_DATE;
                         _sheet.Cells[_rowIndex, _colIndex++].Value = dbdata.DVC_STTM;
-                        if (dbdata.MedicalNoteNo == (temp_MedicalNoteNo == null ? string.Empty: temp_MedicalNoteNo) && dbdata.ExaRequestNo == (temp_ExaRequestNo == null ? string.Empty:temp_ExaRequestNo)&&dbdata.DVC_CHRT == (temp_DVC_CHRT == null ? string.Empty : temp_DVC_CHRT))
+                        if (dbdata.MedicalNoteNo == (temp_MedicalNoteNo == null ? string.Empty : temp_MedicalNoteNo) && dbdata.ExaRequestNo == (temp_ExaRequestNo == null ? string.Empty : temp_ExaRequestNo) && dbdata.DVC_CHRT == (temp_DVC_CHRT == null ? string.Empty : temp_DVC_CHRT))
                         {
                             _sheet.Cells[_rowIndex--, _colIndex].Value = "v";
                             _sheet.Cells[_rowIndex++, _colIndex].Value = "v";
