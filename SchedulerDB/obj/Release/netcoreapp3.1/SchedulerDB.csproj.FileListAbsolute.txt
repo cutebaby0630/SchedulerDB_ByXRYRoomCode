@@ -37,7 +37,6 @@ C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\bin\Release\n
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\bin\Release\netcoreapp3.1\runtimes\win\lib\netcoreapp3.0\System.Drawing.Common.dll
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\bin\Release\netcoreapp3.1\runtimes\win\lib\netcoreapp3.0\System.Security.Cryptography.Pkcs.dll
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\bin\Release\netcoreapp3.1\runtimes\win\lib\netcoreapp2.0\System.Text.Encoding.CodePages.dll
-C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.csprojAssemblyReference.cache
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.AssemblyInfoInputs.cache
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.AssemblyInfo.cs
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.csproj.CoreCompileInputs.cache
@@ -45,3 +44,4 @@ C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\n
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.dll
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.pdb
 C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.genruntimeconfig.cache
+C:\Users\v-vyin\source\repos\SchedulerDB_ByXRYRoomCode\SchedulerDB\obj\Release\netcoreapp3.1\SchedulerDB.csprojAssemblyReference.cache
